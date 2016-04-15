@@ -1,0 +1,10 @@
+[package]
+name = "final_project"
+version = "0.1.0"
+authors = ["Adalynn Dudney"]
+
+[dependencies]
+cgmath = "0.7.0"
+glium = "0.13.5"
+noise = "0.1.5"
+rand = "0.3.14"
