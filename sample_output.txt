@@ -1,4 +1,8 @@
-sample output: (4 background threads)
+sample outputs: (4 background threads)
 SG: 2.54 ms PG: 1.24 ms
 SP: 0.18 ms PP: 0.16 ms
 SM: 64.81 ms PM: 24.13 ms
+
+SG: 2.57 ms PG: 1.23 ms
+SP: 0.14 ms PP: 0.20 ms
+SM: 60.00 ms PM: 25.98 ms
