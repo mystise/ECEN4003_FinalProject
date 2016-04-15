@@ -184,6 +184,9 @@ fn main() {
                                     camera_speed = 0.0;
                                 },
                                 VirtualKeyCode::Escape => {
+                                    println!("SG: {:.2} ms PG: {:.2} ms", scheduler.serial_generator_time, scheduler.parallel_generator_time);
+                                    println!("SP: {:.2} ms PP: {:.2} ms", scheduler.serial_populator_time, scheduler.parallel_populator_time);
+                                    println!("SM: {:.2} ms PM: {:.2} ms", scheduler.serial_meshing_time, scheduler.parallel_meshing_time);
                                     return;
                                 },
                                 _ => ()

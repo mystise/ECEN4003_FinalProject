@@ -37,7 +37,14 @@ pub struct MasterScheduler {
     // Mesh Constructors
     pub serially_construct: bool,
     serial_constructor: SerialMeshConstructor,
-    parallel_constructor: ParallelMeshConstructor
+    parallel_constructor: ParallelMeshConstructor,
+    
+    pub serial_generator_time: f64,
+    pub parallel_generator_time: f64,
+    pub serial_populator_time: f64,
+    pub parallel_populator_time: f64,
+    pub serial_meshing_time: f64,
+    pub parallel_meshing_time: f64
 }
 
 impl MasterScheduler {
@@ -58,7 +65,13 @@ impl MasterScheduler {
             parallel_populator: ParallelPopulator::new(),
             serially_construct: false,
             serial_constructor: SerialMeshConstructor,
-            parallel_constructor: ParallelMeshConstructor::new()
+            parallel_constructor: ParallelMeshConstructor::new(),
+            serial_generator_time: -1.0,
+            parallel_generator_time: -1.0,
+            serial_populator_time: -1.0,
+            parallel_populator_time: -1.0,
+            serial_meshing_time: -1.0,
+            parallel_meshing_time: -1.0
         }
     }
     
@@ -115,8 +128,25 @@ impl MasterScheduler {
             }
             
             let duration = Instant::now() - now;
+            let ms = duration.as_secs() as f64 * 1000.0 + duration.subsec_nanos() as f64 / 1000000.0;
             
-            println!("Generated: {} in {:.2} ms", generating.len(), duration.as_secs() as f64 * 1000.0 + duration.subsec_nanos() as f64 / 1000000.0);
+            println!("Generated: {} in {:.2} ms", generating.len(), ms);
+            
+            if self.serially_generate {
+                if self.serial_generator_time < 0.0 {
+                    self.serial_generator_time = ms;
+                } else {
+                    self.serial_generator_time += ms;
+                    self.serial_generator_time /= 2.0;
+                }
+            } else {
+                if self.parallel_generator_time < 0.0 {
+                    self.parallel_generator_time = ms;
+                } else {
+                    self.parallel_generator_time += ms;
+                    self.parallel_generator_time /= 2.0;
+                }
+            }
         }
         
         self.unpopulated_chunks.extend(generating);
@@ -153,8 +183,25 @@ impl MasterScheduler {
             }
             
             let duration = Instant::now() - now;
+            let ms = duration.as_secs() as f64 * 1000.0 + duration.subsec_nanos() as f64 / 1000000.0;
             
-            println!("Populated: {} in {:.2} ms", populating.len(), duration.as_secs() as f64 * 1000.0 + duration.subsec_nanos() as f64 / 1000000.0);
+            println!("Populated: {} in {:.2} ms", populating.len(), ms);
+            
+            if self.serially_populate {
+                if self.serial_populator_time < 0.0 {
+                    self.serial_populator_time = ms;
+                } else {
+                    self.serial_populator_time += ms;
+                    self.serial_populator_time /= 2.0;
+                }
+            } else {
+                if self.parallel_populator_time < 0.0 {
+                    self.parallel_populator_time = ms;
+                } else {
+                    self.parallel_populator_time += ms;
+                    self.parallel_populator_time /= 2.0;
+                }
+            }
         }
         
         self.unmeshed_chunks.extend(populating);
@@ -198,8 +245,25 @@ impl MasterScheduler {
             }
             
             let duration = Instant::now() - now;
+            let ms = duration.as_secs() as f64 * 1000.0 + duration.subsec_nanos() as f64 / 1000000.0;
             
-            println!("Meshed: {} in {:.2} ms", meshing.len(), duration.as_secs() as f64 * 1000.0 + duration.subsec_nanos() as f64 / 1000000.0);
+            println!("Meshed: {} in {:.2} ms", meshing.len(), ms);
+            
+            if self.serially_construct {
+                if self.serial_meshing_time < 0.0 {
+                    self.serial_meshing_time = ms;
+                } else {
+                    self.serial_meshing_time += ms;
+                    self.serial_meshing_time /= 2.0;
+                }
+            } else {
+                if self.parallel_meshing_time < 0.0 {
+                    self.parallel_meshing_time = ms;
+                } else {
+                    self.parallel_meshing_time += ms;
+                    self.parallel_meshing_time /= 2.0;
+                }
+            }
         }
     }
     
