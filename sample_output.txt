@@ -1,8 +1,89 @@
-sample outputs: (4 background threads)
-SG: 2.54 ms PG: 1.24 ms
-SP: 0.18 ms PP: 0.16 ms
-SM: 64.81 ms PM: 24.13 ms
+The tests were run on a computer with 4 virtual cores = 2 physical cores + hyperthreading
 
-SG: 2.57 ms PG: 1.23 ms
-SP: 0.14 ms PP: 0.20 ms
-SM: 60.00 ms PM: 25.98 ms
+To compile, install Rust-lang version 1.8.0 and run `cargo build --release`.
+To run the tests, run `cargo run --release -- -tm -s=<Seed> -tc=<Background Thread Count>`
+To run in user controllable mode, omit `-tm` from the argument list.
+
+Legend:
+S_ : Average time taken with serial algorithm
+P_ : Average time taken with parallel algorithm
+_G : Average time taken to generate chunks
+_P : Average time taken to populate chunks
+_M : Average time taken to mesh chunks
+
+sample outputs: (8 background threads)
+
+Seed = 1024
+
+Run 1
+SG: 1.65 ms PG: 0.87 ms
+SP: 0.10 ms PP: 0.14 ms
+SM: 67.57 ms PM: 13.61 ms
+
+Run 2
+SG: 1.75 ms PG: 0.87 ms
+SP: 0.11 ms PP: 0.14 ms
+SM: 71.22 ms PM: 14.32 ms
+
+Seed = 2005
+
+Run 1
+SG: 1.69 ms PG: 0.87 ms
+SP: 0.11 ms PP: 0.15 ms
+SM: 64.96 ms PM: 13.89 ms
+
+Run 2
+SG: 1.69 ms PG: 0.87 ms
+SP: 0.10 ms PP: 0.15 ms
+SM: 63.33 ms PM: 12.90 ms
+
+sample outputs: (4 background threads)
+
+Seed = 1024
+Run 1
+SG: 1.72 ms PG: 0.87 ms
+SP: 0.11 ms PP: 0.12 ms
+SM: 64.36 ms PM: 12.75 ms
+
+Run 2
+SG: 1.57 ms PG: 0.85 ms
+SP: 0.10 ms PP: 0.16 ms
+SM: 64.29 ms PM: 14.46 ms
+
+Seed = 2005
+
+Run 1
+SG: 1.51 ms PG: 0.89 ms
+SP: 0.10 ms PP: 0.13 ms
+SM: 61.64 ms PM: 14.70 ms
+
+Run 2
+SG: 1.65 ms PG: 0.89 ms
+SP: 0.11 ms PP: 0.13 ms
+SM: 62.88 ms PM: 12.92 ms
+
+sample outputs: (2 background threads)
+
+Seed = 1024
+
+Run 1
+SG: 1.56 ms PG: 1.11 ms
+SP: 0.09 ms PP: 0.11 ms
+SM: 62.04 ms PM: 14.10 ms
+
+Run 2
+SG: 1.54 ms PG: 1.12 ms
+SP: 0.09 ms PP: 0.13 ms
+SM: 62.93 ms PM: 15.17 ms
+
+Seed = 2005
+
+Run 1
+SG: 1.75 ms PG: 1.07 ms
+SP: 0.11 ms PP: 0.12 ms
+SM: 65.67 ms PM: 14.89 ms
+
+Run 2
+SG: 1.61 ms PG: 1.07 ms
+SP: 0.11 ms PP: 0.12 ms
+SM: 65.94 ms PM: 15.20 ms

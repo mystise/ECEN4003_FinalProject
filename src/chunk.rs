@@ -193,7 +193,7 @@ pub fn populate<F>(chunk: Arc<RwLock<Chunk>>, pos: ChunkPosition, seed: u32, mut
     }
 }
 
-pub fn construct_mesh<F>(chunk: Arc<RwLock<Chunk>>, pos: ChunkPosition, mut get_block: F) -> (Vec<Vertex>, Vec<u32>) where F: FnMut(ChunkPosition, Position) -> Block {
+pub fn mesh<F>(chunk: Arc<RwLock<Chunk>>, pos: ChunkPosition, mut get_block: F) -> (Vec<Vertex>, Vec<u32>) where F: FnMut(ChunkPosition, Position) -> Block {
     let chunk = chunk.read().unwrap();
     
     let mut block_exists = |mut pos: ChunkPosition, mut block_pos: Position| {

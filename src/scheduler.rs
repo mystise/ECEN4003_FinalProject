@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::time::{SystemTime, UNIX_EPOCH, Instant};
+use std::time::Instant;
 use std::sync::mpsc;
 use std::sync::mpsc::{Sender, Receiver};
 use std::thread;
@@ -34,22 +34,27 @@ pub struct MasterScheduler {
     serial_populator: SerialPopulator,
     parallel_populator: ParallelPopulator,
     
-    // Mesh Constructors
-    pub serially_construct: bool,
-    serial_constructor: SerialMeshConstructor,
-    parallel_constructor: ParallelMeshConstructor,
+    // Meshers
+    pub serially_mesh: bool,
+    serial_mesher: SerialMesher,
+    parallel_mesher: ParallelMesher,
     
     pub serial_generator_time: f64,
     pub parallel_generator_time: f64,
     pub serial_populator_time: f64,
     pub parallel_populator_time: f64,
     pub serial_meshing_time: f64,
-    pub parallel_meshing_time: f64
+    pub parallel_meshing_time: f64,
+    serial_generator_count: f64,
+    parallel_generator_count: f64,
+    serial_populator_count: f64,
+    parallel_populator_count: f64,
+    serial_meshing_count: f64,
+    parallel_meshing_count: f64
 }
 
 impl MasterScheduler {
-    pub fn new() -> MasterScheduler {
-        let seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
+    pub fn new(seed: u32, thread_count: usize) -> MasterScheduler {
         MasterScheduler {
             seed: seed,
             noise_seed: Arc::new(Seed::new(seed)),
@@ -59,19 +64,25 @@ impl MasterScheduler {
             unpopulated_chunks: HashSet::new(),
             serially_generate: false,
             serial_generator: SerialGenerator,
-            parallel_generator: ParallelGenerator::new(),
+            parallel_generator: ParallelGenerator::new(thread_count),
             serially_populate: false,
             serial_populator: SerialPopulator,
-            parallel_populator: ParallelPopulator::new(),
-            serially_construct: false,
-            serial_constructor: SerialMeshConstructor,
-            parallel_constructor: ParallelMeshConstructor::new(),
+            parallel_populator: ParallelPopulator::new(thread_count),
+            serially_mesh: false,
+            serial_mesher: SerialMesher,
+            parallel_mesher: ParallelMesher::new(thread_count),
             serial_generator_time: -1.0,
             parallel_generator_time: -1.0,
             serial_populator_time: -1.0,
             parallel_populator_time: -1.0,
             serial_meshing_time: -1.0,
-            parallel_meshing_time: -1.0
+            parallel_meshing_time: -1.0,
+            serial_generator_count: 0.0,
+            parallel_generator_count: 0.0,
+            serial_populator_count: 0.0,
+            parallel_populator_count: 0.0,
+            serial_meshing_count: 0.0,
+            parallel_meshing_count: 0.0
         }
     }
     
@@ -133,19 +144,11 @@ impl MasterScheduler {
             println!("Generated: {} in {:.2} ms", generating.len(), ms);
             
             if self.serially_generate {
-                if self.serial_generator_time < 0.0 {
-                    self.serial_generator_time = ms;
-                } else {
-                    self.serial_generator_time += ms;
-                    self.serial_generator_time /= 2.0;
-                }
+                self.serial_generator_count += 1.0;
+                self.serial_generator_time += (ms - self.serial_generator_time) / self.serial_generator_count;
             } else {
-                if self.parallel_generator_time < 0.0 {
-                    self.parallel_generator_time = ms;
-                } else {
-                    self.parallel_generator_time += ms;
-                    self.parallel_generator_time /= 2.0;
-                }
+                self.parallel_generator_count += 1.0;
+                self.parallel_generator_time += (ms - self.parallel_generator_time) / self.parallel_generator_count;
             }
         }
         
@@ -188,25 +191,17 @@ impl MasterScheduler {
             println!("Populated: {} in {:.2} ms", populating.len(), ms);
             
             if self.serially_populate {
-                if self.serial_populator_time < 0.0 {
-                    self.serial_populator_time = ms;
-                } else {
-                    self.serial_populator_time += ms;
-                    self.serial_populator_time /= 2.0;
-                }
+                self.serial_populator_count += 1.0;
+                self.serial_populator_time += (ms - self.serial_populator_time) / self.serial_populator_count;
             } else {
-                if self.parallel_populator_time < 0.0 {
-                    self.parallel_populator_time = ms;
-                } else {
-                    self.parallel_populator_time += ms;
-                    self.parallel_populator_time /= 2.0;
-                }
+                self.parallel_populator_count += 1.0;
+                self.parallel_populator_time += (ms - self.parallel_populator_time) / self.parallel_populator_count;
             }
         }
         
         self.unmeshed_chunks.extend(populating);
         
-        // Construct meshes for all chunks with all their neighbors populated
+        // Mesh all chunks with all their neighbors populated
         
         let mut meshing = Vec::new();
         
@@ -238,10 +233,10 @@ impl MasterScheduler {
         if meshing.len() != 0 {
             let now = Instant::now();
             
-            if self.serially_construct {
-                self.serial_constructor.construct_meshes(&meshing, &self.chunks, &mut self.meshes, facade);
+            if self.serially_mesh {
+                self.serial_mesher.mesh(&meshing, &self.chunks, &mut self.meshes, facade);
             } else {
-                self.parallel_constructor.construct_meshes(&meshing, &self.chunks, &mut self.meshes, facade);
+                self.parallel_mesher.mesh(&meshing, &self.chunks, &mut self.meshes, facade);
             }
             
             let duration = Instant::now() - now;
@@ -249,20 +244,12 @@ impl MasterScheduler {
             
             println!("Meshed: {} in {:.2} ms", meshing.len(), ms);
             
-            if self.serially_construct {
-                if self.serial_meshing_time < 0.0 {
-                    self.serial_meshing_time = ms;
-                } else {
-                    self.serial_meshing_time += ms;
-                    self.serial_meshing_time /= 2.0;
-                }
+            if self.serially_mesh {
+                self.serial_meshing_count += 1.0;
+                self.serial_meshing_time += (ms - self.serial_meshing_time) / self.serial_meshing_count;
             } else {
-                if self.parallel_meshing_time < 0.0 {
-                    self.parallel_meshing_time = ms;
-                } else {
-                    self.parallel_meshing_time += ms;
-                    self.parallel_meshing_time /= 2.0;
-                }
+                self.parallel_meshing_count += 1.0;
+                self.parallel_meshing_time += (ms - self.parallel_meshing_time) / self.parallel_meshing_count;
             }
         }
     }
@@ -332,9 +319,7 @@ struct ParallelGenerator {
 }
 
 impl ParallelGenerator {
-    fn new() -> ParallelGenerator {
-        let thread_count = 4;
-        
+    fn new(thread_count: usize) -> ParallelGenerator {
         let (chunk_sender, chunk_receiver) = mpsc::channel();
         let mut worker_senders = Vec::new();
         
@@ -410,9 +395,7 @@ struct ParallelPopulator {
 }
 
 impl ParallelPopulator {
-    fn new() -> ParallelPopulator {
-        let thread_count = 4;
-        
+    fn new(thread_count: usize) -> ParallelPopulator {
         let (chunk_sender, chunk_receiver) = mpsc::channel();
         let mut worker_senders = Vec::new();
         
@@ -453,13 +436,7 @@ impl Populator for ParallelPopulator {
             let (pos, command) = self.chunk_receiver.recv().unwrap();
             match command {
                 ChunkPopulationRequest::Change(block_pos, block) => {
-                    if let Ok(mut chunk) = chunks.get(&pos).unwrap().try_write() {
-                        if chunk.0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize] == Block::Air {
-                            chunk.0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize] = block;
-                        }
-                    } else {
-                        changes.entry(pos).or_insert(Vec::new()).push((block_pos, block));
-                    }
+                    changes.entry(pos).or_insert(Vec::new()).push((block_pos, block));
                 },
                 ChunkPopulationRequest::Done => {
                     populating_set.remove(&pos);
@@ -478,16 +455,16 @@ impl Populator for ParallelPopulator {
     }
 }
 
-trait MeshConstructor {
-    fn construct_meshes<F: Facade>(&mut self, constructing: &[ChunkPosition], chunks: &HashMap<ChunkPosition, Arc<RwLock<Chunk>>>, meshes: &mut HashMap<ChunkPosition, (VertexBuffer<Vertex>, IndexBuffer<u32>)>, facade: &F);
+trait Mesher {
+    fn mesh<F: Facade>(&mut self, meshing: &[ChunkPosition], chunks: &HashMap<ChunkPosition, Arc<RwLock<Chunk>>>, meshes: &mut HashMap<ChunkPosition, (VertexBuffer<Vertex>, IndexBuffer<u32>)>, facade: &F);
 }
 
-struct SerialMeshConstructor;
+struct SerialMesher;
 
-impl MeshConstructor for SerialMeshConstructor {
-    fn construct_meshes<F: Facade>(&mut self, constructing: &[ChunkPosition], chunks: &HashMap<ChunkPosition, Arc<RwLock<Chunk>>>, meshes: &mut HashMap<ChunkPosition, (VertexBuffer<Vertex>, IndexBuffer<u32>)>, facade: &F) {
-        for &pos in constructing {
-            let (vertices, indices) = chunk::construct_mesh(chunks.get(&pos).unwrap().clone(), pos, |pos, block_pos| {
+impl Mesher for SerialMesher {
+    fn mesh<F: Facade>(&mut self, meshing: &[ChunkPosition], chunks: &HashMap<ChunkPosition, Arc<RwLock<Chunk>>>, meshes: &mut HashMap<ChunkPosition, (VertexBuffer<Vertex>, IndexBuffer<u32>)>, facade: &F) {
+        for &pos in meshing {
+            let (vertices, indices) = chunk::mesh(chunks.get(&pos).unwrap().clone(), pos, |pos, block_pos| {
                 chunks.get(&pos).unwrap().read().unwrap().0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
             });
             
@@ -496,15 +473,13 @@ impl MeshConstructor for SerialMeshConstructor {
     }
 }
 
-struct ParallelMeshConstructor {
+struct ParallelMesher {
     worker_senders: Vec<Sender<(ChunkPosition, Arc<RwLock<Chunk>>, [Arc<RwLock<Chunk>>; 8])>>,
     chunk_receiver: Receiver<(ChunkPosition, Vec<Vertex>, Vec<u32>)>
 }
 
-impl ParallelMeshConstructor {
-    fn new() -> ParallelMeshConstructor {
-        let thread_count = 4;
-        
+impl ParallelMesher {
+    fn new(thread_count: usize) -> ParallelMesher {
         let (chunk_sender, chunk_receiver) = mpsc::channel();
         let mut worker_senders = Vec::new();
         
@@ -515,31 +490,32 @@ impl ParallelMeshConstructor {
             
             thread::spawn(move || {
                 for (pos, chunk, surrounding) in &worker_receiver {
-                    let (vertices, indices) = chunk::construct_mesh(chunk, pos, |new_pos, block_pos| {
+                    let surrounding = surrounding.iter().map(|x| x.read().unwrap()).collect::<Vec<_>>();
+                    let (vertices, indices) = chunk::mesh(chunk, pos, |new_pos, block_pos| {
                         match (new_pos.x - pos.x, new_pos.y - pos.y) {
                             (0, 1) => {
-                                surrounding[0].read().unwrap().0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
+                                surrounding[0].0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
                             },
                             (1, 1) => {
-                                surrounding[1].read().unwrap().0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
+                                surrounding[1].0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
                             },
                             (1, 0) => {
-                                surrounding[2].read().unwrap().0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
+                                surrounding[2].0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
                             },
                             (1, -1) => {
-                                surrounding[3].read().unwrap().0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
+                                surrounding[3].0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
                             },
                             (0, -1) => {
-                                surrounding[4].read().unwrap().0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
+                                surrounding[4].0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
                             },
                             (-1, -1) => {
-                                surrounding[5].read().unwrap().0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
+                                surrounding[5].0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
                             },
                             (-1, 0) => {
-                                surrounding[6].read().unwrap().0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
+                                surrounding[6].0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
                             },
                             (-1, 1) => {
-                                surrounding[7].read().unwrap().0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
+                                surrounding[7].0[block_pos.x as usize][block_pos.y as usize][block_pos.z as usize]
                             },
                             x => {
                                 unreachable!("Read invalid chunk displacement: {:?}", x)
@@ -551,15 +527,15 @@ impl ParallelMeshConstructor {
             });
         }
         
-        ParallelMeshConstructor {worker_senders: worker_senders, chunk_receiver: chunk_receiver}
+        ParallelMesher {worker_senders: worker_senders, chunk_receiver: chunk_receiver}
     }
 }
 
-impl MeshConstructor for ParallelMeshConstructor {
-    fn construct_meshes<F: Facade>(&mut self, constructing: &[ChunkPosition], chunks: &HashMap<ChunkPosition, Arc<RwLock<Chunk>>>, meshes: &mut HashMap<ChunkPosition, (VertexBuffer<Vertex>, IndexBuffer<u32>)>, facade: &F) {
+impl Mesher for ParallelMesher {
+    fn mesh<F: Facade>(&mut self, meshing: &[ChunkPosition], chunks: &HashMap<ChunkPosition, Arc<RwLock<Chunk>>>, meshes: &mut HashMap<ChunkPosition, (VertexBuffer<Vertex>, IndexBuffer<u32>)>, facade: &F) {
         let thread_count = self.worker_senders.len();
         
-        for (i, &pos) in constructing.iter().enumerate() {
+        for (i, &pos) in meshing.iter().enumerate() {
             self.worker_senders[i % thread_count].send((pos, chunks.get(&pos).unwrap().clone(),
             [chunks.get(&pos.north()).unwrap().clone(), chunks.get(&pos.north_east()).unwrap().clone(),
             chunks.get(&pos.east()).unwrap().clone(), chunks.get(&pos.south_east()).unwrap().clone(),
@@ -567,15 +543,15 @@ impl MeshConstructor for ParallelMeshConstructor {
             chunks.get(&pos.west()).unwrap().clone(), chunks.get(&pos.north_west()).unwrap().clone()])).unwrap();
         }
         
-        let mut constructing_set = HashSet::<ChunkPosition>::new();
-        constructing_set.extend(constructing);
+        let mut meshing_set = HashSet::<ChunkPosition>::new();
+        meshing_set.extend(meshing);
         
-        while constructing_set.len() > 0 {
+        while meshing_set.len() > 0 {
             let (pos, vertices, indices) = self.chunk_receiver.recv().expect("1");
             
             meshes.insert(pos, (VertexBuffer::new(facade, &vertices).expect("2"), IndexBuffer::new(facade, PrimitiveType::TrianglesList, &indices).expect("3")));
             
-            constructing_set.remove(&pos);
+            meshing_set.remove(&pos);
         }
     }
 }

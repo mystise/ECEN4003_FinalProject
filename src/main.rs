@@ -8,7 +8,8 @@ mod chunk;
 mod position;
 mod scheduler;
 
-use std::time::{Instant, Duration};
+use std::time::{Instant, Duration, UNIX_EPOCH, SystemTime};
+use std::env;
 
 use glium::{Surface, glutin, DisplayBuild, Program};
 use glium::glutin::{ElementState, Event, VirtualKeyCode};
@@ -46,19 +47,43 @@ fn main() {
     }
     ", None).unwrap();
     
-    let mut camera_position = [0.5, 0.0, 0.0f32];
-    let mut scheduler = MasterScheduler::new();
-    
     let mut move_camera = true;
     let mut distant_camera = false;
     let mut camera_side_speed = 0.0;
     let mut camera_speed = 0.1;
     
+    let mut testing_mode = 0;
+    let mut camera_position = [0.5, 0.0, 0.0f32];
+    let mut seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
+    let mut thread_count = 4;
+    
+    for arg in env::args() {
+        let arg = arg.split('=').collect::<Vec<&str>>();
+        match arg[0] {
+            "-s" => {
+                seed = arg[1].parse().unwrap();
+            },
+            "-tc" => {
+                thread_count = arg[1].parse().unwrap();
+            },
+            "-tm" => {
+                testing_mode = 1;
+                camera_speed = 16.0;
+                distant_camera = true;
+            }
+            _ => {
+                
+            }
+        }
+    }
+    
+    let mut scheduler = MasterScheduler::new(seed, thread_count);
+    
     let timestep: Duration = Duration::new(0, 16666667);
     let mut time = Duration::new(0, 0);
     let mut prev_time = Instant::now();
     
-    loop {
+    'outer: loop {
         let now = Instant::now();
         time = now - prev_time + time;
         prev_time = now;
@@ -104,6 +129,24 @@ fn main() {
             } else {
                 camera_position[2] = 128.0;
             }
+            
+            if testing_mode != 0 && camera_position[1] >= 4096.0 {
+                match testing_mode {
+                    1 => {
+                        camera_position[1] = 0.0;
+                        testing_mode = 2;
+                        scheduler.serially_generate = !scheduler.serially_generate;
+                        scheduler.serially_populate = !scheduler.serially_populate;
+                        scheduler.serially_mesh = !scheduler.serially_mesh;
+                    },
+                    2 => {
+                        break 'outer;
+                    },
+                    _ => {
+                        unreachable!();
+                    }
+                }
+            }
         }
         
         let (width, height) = {
@@ -134,6 +177,9 @@ fn main() {
                 Event::Closed => return,
                 Event::KeyboardInput(state, _, key_code) => {
                     if state == ElementState::Released {
+                        if testing_mode != 0 {
+                            continue;
+                        }
                         if let Some(key_code) = key_code {
                             match key_code {
                                 VirtualKeyCode::Key1 => {
@@ -154,11 +200,11 @@ fn main() {
                                 },
                                 VirtualKeyCode::Key5 => {
                                     println!("Serial meshing enabled");
-                                    scheduler.serially_construct = true;
+                                    scheduler.serially_mesh = true;
                                 },
                                 VirtualKeyCode::Key6 => {
                                     println!("Parallel meshing enabled");
-                                    scheduler.serially_construct = false;
+                                    scheduler.serially_mesh = false;
                                 },
                                 VirtualKeyCode::Space => {
                                     move_camera = !move_camera;
@@ -184,10 +230,7 @@ fn main() {
                                     camera_speed = 0.0;
                                 },
                                 VirtualKeyCode::Escape => {
-                                    println!("SG: {:.2} ms PG: {:.2} ms", scheduler.serial_generator_time, scheduler.parallel_generator_time);
-                                    println!("SP: {:.2} ms PP: {:.2} ms", scheduler.serial_populator_time, scheduler.parallel_populator_time);
-                                    println!("SM: {:.2} ms PM: {:.2} ms", scheduler.serial_meshing_time, scheduler.parallel_meshing_time);
-                                    return;
+                                    break 'outer;
                                 },
                                 _ => ()
                             }
@@ -198,4 +241,8 @@ fn main() {
             }
         }
     }
+    
+    println!("SG: {:.2} ms PG: {:.2} ms", scheduler.serial_generator_time, scheduler.parallel_generator_time);
+    println!("SP: {:.2} ms PP: {:.2} ms", scheduler.serial_populator_time, scheduler.parallel_populator_time);
+    println!("SM: {:.2} ms PM: {:.2} ms", scheduler.serial_meshing_time, scheduler.parallel_meshing_time);
 }
