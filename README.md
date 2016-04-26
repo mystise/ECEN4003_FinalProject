@@ -5,6 +5,12 @@ Generates a psuedo infinite terrain populated with stone, grass, water, and tree
 
 Contains the ability to generate, populate, and mesh in serial or parallel.
 
+## Compilation
+
+Install [Rust](https://www.rust-lang.org) 1.8 or above, run `cargo build --release`.
+
+To run the program, run `cargo run --release`.
+
 ## Arguments
 
 `-s=<integer>` Sets the seed for the world generator.
