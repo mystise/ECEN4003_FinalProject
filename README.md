@@ -33,5 +33,7 @@ Testing mode disables user input, sets the camera to a fixed high speed, enables
 
 ## License
 Licensed under the MIT license.
+
 Don't copy this and market it as your own class project, that's a really bad idea. Feel free to read the code and learn from it though.
+
 See the [LICENSE](LICENSE.md) file for details.
