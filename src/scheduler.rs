@@ -119,12 +119,11 @@ impl MasterScheduler {
         
         let mut generating = Vec::new();
         
-        'outer: for x in camera_chunk_pos[0] - radius .. camera_chunk_pos[0] + radius + 1 {
+        for x in camera_chunk_pos[0] - radius .. camera_chunk_pos[0] + radius + 1 {
             for y in camera_chunk_pos[1] - radius .. camera_chunk_pos[1] + radius + 1 {
                 let pos = ChunkPosition {x: x, y: y};
                 if !self.chunks.contains_key(&pos) {
                     generating.push(pos);
-                    //break 'outer;
                 }
             }
         }
@@ -168,7 +167,6 @@ impl MasterScheduler {
             self.chunks.contains_key(&ChunkPosition {x: pos.x + 0, y: pos.y - 1}) &&
             self.chunks.contains_key(&ChunkPosition {x: pos.x - 1, y: pos.y - 1}) {
                 populating.push(pos);
-                //break;
             }
         }
         
