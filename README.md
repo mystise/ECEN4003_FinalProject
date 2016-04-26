@@ -31,6 +31,12 @@ Testing mode disables user input, sets the camera to a fixed high speed, enables
 `[,]` Adds to camera X velocity, Left/Right respectively (Will make the camera slightly jittery in Z movement)
 `Escape` Exits the program
 
+## Screenshots
+
+![Terrain View](screenshots/screenshot_forward.png)
+
+![Overhead View](screenshots/screenshot_overhead.png)
+
 ## License
 Licensed under the MIT license.
 
