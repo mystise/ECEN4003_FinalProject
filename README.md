@@ -14,7 +14,9 @@ To run the program, run `cargo run --release`.
 ## Arguments
 
 `-s=<integer>` Sets the seed for the world generator.
+
 `-tc=<integer>` Sets the number of background worker threads used.
+
 `-tm` Enables testing mode.
 
 Testing mode disables user input, sets the camera to a fixed high speed, enables overhead view, and runs the same terrain twice for 4096 blocks, once completely serial and once completely parallel.
