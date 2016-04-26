@@ -79,7 +79,8 @@ fn main() {
     
     let mut scheduler = MasterScheduler::new(seed, thread_count);
     
-    let timestep: Duration = Duration::new(0, 16666667);
+    let timestep = Duration::new(0, 16666667);
+    let one_second = Duration::new(1, 0);
     let mut time = Duration::new(0, 0);
     let mut prev_time = Instant::now();
     
@@ -87,6 +88,11 @@ fn main() {
         let now = Instant::now();
         time = now - prev_time + time;
         prev_time = now;
+        
+        while time > one_second {
+            println!("Lagging behind, removing one second of update time");
+            time = time - one_second;
+        }
         
         while time > timestep {
             time = time - timestep;
