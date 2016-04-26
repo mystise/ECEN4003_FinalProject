@@ -261,7 +261,7 @@ impl MasterScheduler {
                write: true,
                .. Default::default()
            },
-            backface_culling: BackfaceCullingMode::CullingDisabled,
+            backface_culling: BackfaceCullingMode::CullClockwise,
             .. Default::default()
         };
         
