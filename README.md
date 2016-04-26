@@ -9,7 +9,7 @@ Contains the ability to generate, populate, and mesh in serial or parallel.
 
 Install [Rust](https://www.rust-lang.org) 1.8 or above, run `cargo build --release`.
 
-To run the program, run `cargo run --release`.
+To run the program, run `cargo run --release`. To run with arguments, run `cargo run --release -- <arguments>`.
 
 ## Arguments
 
