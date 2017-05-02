@@ -1,5 +1,5 @@
 # Voxel Terrain Generator
-Built as my final project for ECEN 4003 - Concurrent Programming.
+Built as my final project for ECEN 4003 - Concurrent Programming, updated for ECEN 5593 - Advanced Computer Architecture.
 
 Generates a psuedo infinite terrain populated with stone, grass, water, and trees. Camera can either hover slightly above the terrain or can show a general overview. Terrain is limited to 128 blocks in Z, but limited to 2^35 blocks in both X and Y.
 
@@ -7,7 +7,7 @@ Contains the ability to generate, populate, and mesh in serial or parallel.
 
 ## Compilation
 
-Install [Rust](https://www.rust-lang.org) 1.8 or above, run `cargo build --release`.
+Install [Rust](https://www.rust-lang.org) 1.18 or above, run `cargo build --release`.
 
 To run the program, run `cargo run --release`. To run with arguments, run `cargo run --release -- <arguments>`.
 

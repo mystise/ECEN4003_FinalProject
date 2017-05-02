@@ -25,7 +25,7 @@ fn main() {
         .with_title(format!("Parallel Voxels"))
         .build_glium()
         .unwrap();
-    
+
     let program = Program::from_source(&display, "
     #version 140
     uniform mat4 model_view_projection;
@@ -46,17 +46,17 @@ fn main() {
         f_color = vec4(v_color.rgb, 1.0);
     }
     ", None).unwrap();
-    
+
     let mut move_camera = true;
     let mut distant_camera = false;
     let mut camera_side_speed = 0.0;
     let mut camera_speed = 0.1;
-    
+
     let mut testing_mode = 0;
     let mut camera_position = [0.5, 0.0, 0.0f32];
     let mut seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
     let mut thread_count = 4;
-    
+
     for arg in env::args() {
         let arg = arg.split('=').collect::<Vec<&str>>();
         match arg[0] {
@@ -72,70 +72,70 @@ fn main() {
                 distant_camera = true;
             }
             _ => {
-                
+
             }
         }
     }
-    
+
     let mut scheduler = MasterScheduler::new(seed, thread_count);
-    
+
     let timestep = Duration::new(0, 16666667);
     let one_second = Duration::new(1, 0);
     let mut time = Duration::new(0, 0);
     let mut prev_time = Instant::now();
-    
+
     'outer: loop {
         let now = Instant::now();
         time = now - prev_time + time;
         prev_time = now;
-        
+
         while time > one_second {
             println!("Lagging behind, removing one second of update time");
             time = time - one_second;
         }
-        
+
         while time > timestep {
             time = time - timestep;
-            
+
             scheduler.update(camera_position, &display);
-            
+
             if move_camera {
                 camera_position[0] += camera_side_speed;
                 camera_position[1] += camera_speed;
             }
-            
+
             if !distant_camera {
                 camera_position[2] = {
                     let pos = (camera_position[0].floor() as i32, camera_position[1].floor() as i32 & !3);
                     let height = {
                         *[scheduler.get_height([pos.0, pos.1 - 4]),
-                        scheduler.get_height([pos.0, pos.1 - 3]),
-                        scheduler.get_height([pos.0, pos.1 - 2]),
-                        scheduler.get_height([pos.0, pos.1 - 1]),
-                        scheduler.get_height([pos.0, pos.1]),
-                        scheduler.get_height([pos.0, pos.1 + 1]),
-                        scheduler.get_height([pos.0, pos.1 + 2]),
-                        scheduler.get_height([pos.0, pos.1 + 3])].iter().max().unwrap() + 4
+                          scheduler.get_height([pos.0, pos.1 - 3]),
+                          scheduler.get_height([pos.0, pos.1 - 2]),
+                          scheduler.get_height([pos.0, pos.1 - 1]),
+                          scheduler.get_height([pos.0, pos.1]),
+                          scheduler.get_height([pos.0, pos.1 + 1]),
+                          scheduler.get_height([pos.0, pos.1 + 2]),
+                          scheduler.get_height([pos.0, pos.1 + 3])].iter().max().unwrap() + 4
                     };
                     let next_height = {
                         *[scheduler.get_height([pos.0, pos.1]),
-                        scheduler.get_height([pos.0, pos.1 + 1]),
-                        scheduler.get_height([pos.0, pos.1 + 2]),
-                        scheduler.get_height([pos.0, pos.1 + 3]),
-                        scheduler.get_height([pos.0, pos.1 + 4]),
-                        scheduler.get_height([pos.0, pos.1 + 5]),
-                        scheduler.get_height([pos.0, pos.1 + 6]),
-                        scheduler.get_height([pos.0, pos.1 + 7])].iter().max().unwrap() + 4
+                          scheduler.get_height([pos.0, pos.1 + 1]),
+                          scheduler.get_height([pos.0, pos.1 + 2]),
+                          scheduler.get_height([pos.0, pos.1 + 3]),
+                          scheduler.get_height([pos.0, pos.1 + 4]),
+                          scheduler.get_height([pos.0, pos.1 + 5]),
+                          scheduler.get_height([pos.0, pos.1 + 6]),
+                          scheduler.get_height([pos.0, pos.1 + 7])].iter().max().unwrap() + 4
                     };
-                    
+
                     let y_interp = (camera_position[1] - pos.1 as f32)/4.0;
-                    
+
                     ((height as f32) * (1.0 - y_interp) + (next_height as f32) * y_interp).max(camera_position[2]-0.05)
                 };
             } else {
                 camera_position[2] = 128.0;
             }
-            
+
             if testing_mode != 0 && camera_position[1] >= 4096.0 {
                 match testing_mode {
                     1 => {
@@ -154,30 +154,30 @@ fn main() {
                 }
             }
         }
-        
+
         let (width, height) = {
             let window = display.get_window().unwrap();
             let size = window.get_inner_size_points().unwrap();
             (size.0 as f32, size.1 as f32)
         };
-        
-        let projection = cgmath::perspective(Deg {s: 90.0}, width / height, 0.01, 1000.0f32);
-        
+
+        let projection = cgmath::perspective(Deg(90.0), width / height, 0.01, 1000.0f32);
+
         let model_view = if distant_camera {
             Matrix4::look_at(Point3::from(camera_position), Point3::from(camera_position) + Vector3::new(0.0, 0.0, -1.0f32), Vector3::new(0.0, 1.0, 0.0f32))
         } else {
             Matrix4::look_at(Point3::from(camera_position), Point3::from(camera_position) + Vector3::new(0.0, 1.0, 0.0f32), Vector3::new(0.0, 0.0, 1.0f32))
         };
-        
+
         let model_view_projection = projection * model_view;
-        
+
         let mut frame = display.draw();
         frame.clear_color_and_depth((0.0, 0.2, 0.8, 0.0), 1.0);
-        
+
         scheduler.render(&mut frame, &program, model_view_projection);
-        
+
         frame.finish().unwrap();
-        
+
         for event in display.poll_events() {
             match event {
                 Event::Closed => return,
@@ -247,7 +247,7 @@ fn main() {
             }
         }
     }
-    
+
     println!("SG: {:.2} ms PG: {:.2} ms", scheduler.serial_generator_time, scheduler.parallel_generator_time);
     println!("SP: {:.2} ms PP: {:.2} ms", scheduler.serial_populator_time, scheduler.parallel_populator_time);
     println!("SM: {:.2} ms PM: {:.2} ms", scheduler.serial_meshing_time, scheduler.parallel_meshing_time);
