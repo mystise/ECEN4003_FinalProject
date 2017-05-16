@@ -1,5 +1,5 @@
 # Voxel Terrain Generator
-Built as my final project for ECEN 4003 - Concurrent Programming, updated for ECEN 5593 - Advanced Computer Architecture.
+Built as my final project for ECEN 4003 - Concurrent Programming.
 
 Generates a psuedo infinite terrain populated with stone, grass, water, and trees. Camera can either hover slightly above the terrain or can show a general overview. Terrain is limited to 128 blocks in Z, but limited to 2^35 blocks in both X and Y.
 
